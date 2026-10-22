@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About Home Control</title>
+<style>
+  :root{color-scheme:dark;--page-bg:#0f172a;--surface:#1e293b;--raised:#334155;--text:#fff;--muted:#94a3b8;--border:#334155;--link:#38bdf8}
+  :root[data-theme="light"]{color-scheme:light;--page-bg:#f1f5f9;--surface:#fff;--raised:#e2e8f0;--text:#0f172a;--muted:#475569;--border:#cbd5e1;--link:#0369a1}
+  body{font-family:sans-serif;text-align:center;background:var(--page-bg);color:var(--text);padding:20px;margin:0;transition:background-color .25s ease,color .25s ease}
+  .navbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:0 auto 20px;padding:10px;background:var(--surface);border-radius:10px;max-width:760px}
+  .navbar a{padding:10px 16px;border-radius:6px;color:var(--muted);text-decoration:none;font-weight:bold}
+  .navbar a:hover,.navbar a:focus-visible,.navbar a[aria-current="page"]{background:var(--raised);color:var(--text)}
+  .theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:0;padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:var(--raised);color:var(--text);font-size:14px;font-weight:bold;cursor:pointer;transition:transform .2s ease,background-color .25s ease,color .25s ease}
+  .theme-toggle:hover{transform:translateY(-2px)}
+  .theme-toggle:focus-visible{outline:3px solid var(--link);outline-offset:3px}
+  .theme-icon{display:inline-block;font-size:18px;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .theme-toggle:hover .theme-icon{transform:rotate(25deg) scale(1.18)}
+  .theme-toggle.animate .theme-icon{transform:rotate(180deg) scale(.65)}
+  .card{box-sizing:border-box;background:var(--surface);border-radius:10px;padding:15px;margin:15px auto;max-width:600px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 4px;border-bottom:1px solid var(--border);text-align:center}
+  th{color:var(--muted);font-weight:600}
+  .muted{font-size:13px;color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){body,.theme-toggle,.theme-icon{transition:none}.theme-toggle:hover{transform:none}}
+</style>
+<script>document.documentElement.dataset.theme=localStorage.getItem("home-control-theme")||"dark";</script>
+</head>
+<body>
+  <nav class="navbar" aria-label="Main navigation">
+    <a href="index.html">Home</a>
+    <a href="analysis.html">Analysis</a>
+    <a href="about.html" aria-current="page">About</a>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+      <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>
+    </button>
+  </nav>
+  <h2>About Home Control</h2>
+  <section class="card">
+    <h3>Home automation dashboard</h3>
+    <p>This website lets you control two lights, a fan, and a 5-pin socket connected to an ESP32.</p>
+    <p>The Analysis page shows each device's status, recorded ON time, daily usage, and recent activity.</p>
+  </section>
+  <section class="card">
+    <h3>Power ratings used for energy estimates</h3>
+    <table>
+      <tr><th>Device</th><th>Rated power</th></tr>
+      <tr><td>Light 1</td><td>15 W</td></tr>
+      <tr><td>Light 2</td><td>15 W</td></tr>
+      <tr><td>Fan</td><td>60 W</td></tr>
+      <tr><td>5-pin socket</td><td>100 W</td></tr>
+    </table>
+    <p class="muted">Energy is estimated from recorded ON time: kWh = power in watts × hours ÷ 1,000. Actual consumption may differ from these rated-power estimates.</p>
+  </section>
+<script>
+  const themeToggle = document.getElementById("theme-toggle");
+  function updateThemeButton() {
+    const isLight = document.documentElement.dataset.theme === "light";
+    themeToggle.setAttribute("aria-label", `Switch to ${isLight ? "dark" : "light"} theme`);
+    themeToggle.setAttribute("aria-pressed", String(isLight));
+    themeToggle.querySelector(".theme-icon").textContent = isLight ? "☾" : "☀";
+    themeToggle.querySelector(".theme-label").textContent = isLight ? "Dark mode" : "Light mode";
+  }
+  updateThemeButton();
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = nextTheme;
+    localStorage.setItem("home-control-theme", nextTheme);
+    themeToggle.classList.remove("animate");
+    void themeToggle.offsetWidth;
+    themeToggle.classList.add("animate");
+    setTimeout(() => themeToggle.classList.remove("animate"), 450);
+    updateThemeButton();
+  });
+</script>
+</body>
+</html>

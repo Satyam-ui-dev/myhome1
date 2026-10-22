@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Control</title>
+<style>
+  :root{color-scheme:dark;--page-bg:#0f172a;--surface:#1e293b;--raised:#334155;--text:#fff;--muted:#94a3b8;--border:#334155;--link:#38bdf8}
+  :root[data-theme="light"]{color-scheme:light;--page-bg:#f1f5f9;--surface:#fff;--raised:#e2e8f0;--text:#0f172a;--muted:#475569;--border:#cbd5e1;--link:#0369a1}
+  body{font-family:sans-serif;text-align:center;background:var(--page-bg);color:var(--text);padding:20px;margin:0;transition:background-color .25s ease,color .25s ease}
+  .navbar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:0 auto 20px;padding:10px;background:var(--surface);border-radius:10px;max-width:760px}
+  .navbar a{padding:10px 16px;border-radius:6px;color:var(--muted);text-decoration:none;font-weight:bold}
+  .navbar a:hover,.navbar a:focus-visible,.navbar a[aria-current="page"]{background:var(--raised);color:var(--text)}
+  .theme-toggle{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:0;padding:9px 14px;border:1px solid var(--border);border-radius:999px;background:var(--raised);color:var(--text);font-size:14px;font-weight:bold;cursor:pointer;transition:transform .2s ease,background-color .25s ease,color .25s ease}
+  .theme-toggle:hover{transform:translateY(-2px)}
+  .theme-toggle:focus-visible{outline:3px solid var(--link);outline-offset:3px}
+  .theme-icon{display:inline-block;font-size:18px;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .theme-toggle:hover .theme-icon{transform:rotate(25deg) scale(1.18)}
+  .theme-toggle.animate .theme-icon{transform:rotate(180deg) scale(.65)}
+  .card{background:var(--surface);border-radius:10px;padding:15px;margin:15px auto;max-width:320px}
+  button{padding:12px 24px;border:0;border-radius:6px;color:#fff;font-weight:bold;font-size:16px;cursor:pointer;margin:4px}
+  .on{background:#22c55e}.off{background:#ef4444}.unk{background:#64748b}
+  .state-toggle{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:space-between;gap:8px;width:min(100%,196px);min-width:0;min-height:54px;padding:8px 12px;border:0;border-radius:999px;color:#fff;font-weight:bold;font-size:16px;cursor:pointer;transition:background-color .25s ease,box-shadow .25s ease}
+  .state-toggle.on{background:#16a34a;box-shadow:0 0 16px #22c55e66}
+  .state-toggle.off,.state-toggle.unk{background:#475569}
+  .state-toggle:focus-visible{outline:3px solid #f8fafc;outline-offset:3px}
+  .toggle-label{flex:1;min-width:0;text-align:left;white-space:nowrap}
+  .toggle-track{display:flex;align-items:center;width:48px;height:28px;padding:3px;border-radius:999px;background:#ffffff40;flex:none}
+  .toggle-thumb{width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px #0006;transform:translateX(0);transition:transform .25s ease}
+  .state-toggle.on .toggle-thumb{transform:translateX(20px)}
+  @media (prefers-reduced-motion:reduce){.state-toggle,.toggle-thumb,.theme-toggle,.theme-icon,body{transition:none}.theme-toggle:hover{transform:none}}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:6px 4px;border-bottom:1px solid var(--border);text-align:center}
+  th{color:var(--muted);font-weight:600}
+  button{min-width:120px}
+  input{padding:8px;border-radius:6px;border:0;width:200px;text-align:center}
+  #msg{font-size:14px;margin-top:10px;min-height:20px;color:var(--muted)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#64748b;margin-right:6px}
+  .dot.up{background:#22c55e}.dot.down{background:#ef4444}
+  .device-image{display:block;width:112px;height:112px;margin:0 auto 10px}
+  .device-image[hidden]{display:none}
+</style>
+<script>document.documentElement.dataset.theme=localStorage.getItem("home-control-theme")||"dark";</script>
+</head>
+<body>
+  <nav class="navbar" aria-label="Main navigation">
+    <a href="index.html" aria-current="page">Home</a>
+    <a href="analysis.html">Analysis</a>
+    <a href="about.html">About</a>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+      <span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">Light mode</span>
+    </button>
+  </nav>
+  <h2>Home Control</h2>
+
+  <div class="card">
+    <div><span id="dot" class="dot"></span><span id="conn">Not connected</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Light 1</h3>
+    <img id="light-image" class="device-image" alt="Light status unknown" hidden>
+    <button id="light-btn" class="state-toggle unk" type="button" role="switch" aria-checked="mixed" aria-label="Light 1 status unknown" onclick="send('light','toggle')">
+      <span class="toggle-label">Unknown</span><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>Light 2</h3>
+    <img id="light2-image" class="device-image" alt="Light 2 status unknown" hidden>
+    <button id="light2-btn" class="state-toggle unk" type="button" role="switch" aria-checked="mixed" aria-label="Light 2 status unknown" onclick="send('light2','toggle')">
+      <span class="toggle-label">Unknown</span><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>Fan</h3>
+    <img id="fan-image" class="device-image" alt="Fan status unknown" hidden>
+    <button id="fan-btn" class="state-toggle unk" type="button" role="switch" aria-checked="mixed" aria-label="Fan status unknown" onclick="send('fan','toggle')">
+      <span class="toggle-label">Unknown</span><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>5-pin socket</h3>
+    <img id="socket-image" class="device-image" alt="5-pin socket status unknown" hidden>
+    <button id="socket-btn" class="state-toggle unk" type="button" role="switch" aria-checked="mixed" aria-label="5-pin socket status unknown" onclick="send('socket','toggle')">
+      <span class="toggle-label">Unknown</span><span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>Device analysis</h3>
+    <p>View separate runtime, energy, and activity analysis for each device.</p>
+    <a href="analysis.html" style="color:var(--link);font-weight:bold">Open device analysis</a>
+  </div>
+
+  <div id="msg"></div>
+
+<script>
+  const themeToggle = document.getElementById("theme-toggle");
+  function updateThemeButton() {
+    const isLight = document.documentElement.dataset.theme === "light";
+    themeToggle.setAttribute("aria-label", `Switch to ${isLight ? "dark" : "light"} theme`);
+    themeToggle.setAttribute("aria-pressed", String(isLight));
+    themeToggle.querySelector(".theme-icon").textContent = isLight ? "☾" : "☀";
+    themeToggle.querySelector(".theme-label").textContent = isLight ? "Dark mode" : "Light mode";
+  }
+  updateThemeButton();
+  themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = nextTheme;
+    localStorage.setItem("home-control-theme", nextTheme);
+    themeToggle.classList.remove("animate");
+    void themeToggle.offsetWidth;
+    themeToggle.classList.add("animate");
+    setTimeout(() => themeToggle.classList.remove("animate"), 450);
+    updateThemeButton();
+  });
+
+  // Must match API_KEY in the ESP32 firmware
+  const API_KEY = "change-me-123";
+
+  // ESP32 address is fixed in code and cannot be changed from the page
+  const ESP_IP = "192.168.1.19";
+  const ip = ESP_IP;
+
+  function setConn(ok, text) {
+    document.getElementById("dot").className = "dot " + (ok ? "up" : "down");
+    document.getElementById("conn").textContent = text;
+  }
+
+  function render(data) {
+    const states = {
+      light: typeof data.light === "boolean" ? data.light : null,
+      light2: typeof data.light2 === "boolean" ? data.light2 : null,
+      fan: typeof data.fan === "boolean" ? data.fan : null,
+      socket: typeof data.socket === "boolean" ? data.socket : null
+    };
+    setBtn("light-btn", "Light 1", states.light);
+    setBtn("light2-btn", "Light 2", states.light2);
+    setBtn("fan-btn", "Fan", states.fan);
+    setBtn("socket-btn", "5-pin socket", states.socket);
+    setDeviceImage("light-image", "light", "Light 1", states.light);
+    setDeviceImage("light2-image", "light2", "Light 2", states.light2);
+    setDeviceImage("fan-image", "fan", "Fan", states.fan);
+    setDeviceImage("socket-image", "socket", "5-pin socket", states.socket);
+  }
+
+  function setDeviceImage(id, device, label, isOn) {
+    const image = document.getElementById(id);
+    if (isOn === null) {
+      image.hidden = true;
+      image.alt = `${label} status unknown`;
+      return;
+    }
+    const state = isOn ? "on" : "off";
+    image.src = `images/${device}-${state}.png`;
+    image.alt = `${label} is ${state.toUpperCase()}`;
+    image.hidden = false;
+  }
+
+  // The switch label and slider reflect the latest ESP32 device state.
+  function setBtn(id, device, isOn) {
+    const b = document.getElementById(id);
+    const displayedOn = isOn === null ? null : !isOn;
+    const state = displayedOn === null ? "status unknown" : `is ${displayedOn ? "ON" : "OFF"}`;
+    b.querySelector(".toggle-label").textContent = displayedOn === null ? "Unknown" : displayedOn ? "ON" : "OFF";
+    b.setAttribute("aria-label", `${device} ${state}`);
+    b.setAttribute("aria-checked", displayedOn === null ? "mixed" : String(displayedOn));
+    b.className = `state-toggle ${displayedOn === null ? "unk" : displayedOn ? "on" : "off"}`;
+  }
+
+  async function call(path, method) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+    try {
+      const res = await fetch(`http://${ip}${path}`, {
+        method,
+        headers: {
+          "X-API-Key": API_KEY,
+          "X-Timezone-Offset-Minutes": String(-new Date().getTimezoneOffset()),
+          "X-Client-Epoch": String(Math.floor(Date.now() / 1000))
+        },
+        signal: ctrl.signal
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      setConn(true, "Connected to " + ip);
+      render(data);
+      document.getElementById("msg").textContent = "";
+    } catch (e) {
+      setConn(false, "Cannot reach ESP32");
+      document.getElementById("msg").textContent = "Error: " + e.message;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  function send(device, state) { if (ip) call(`/api/${device}?state=${state}`, "POST"); }
+  function refresh()           { if (ip) call("/api/status", "GET"); }
+
+  refresh();
+  setInterval(refresh, 5000);   // keep UI in sync
+</script>
+</body>
+</html>
