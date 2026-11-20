@@ -163,7 +163,7 @@
   // The switch label and slider reflect the latest ESP32 device state.
   function setBtn(id, device, isOn) {
     const b = document.getElementById(id);
-    const displayedOn = isOn === null ? null : !isOn;
+    const displayedOn = isOn;
     const state = displayedOn === null ? "status unknown" : `is ${displayedOn ? "ON" : "OFF"}`;
     b.querySelector(".toggle-label").textContent = displayedOn === null ? "Unknown" : displayedOn ? "ON" : "OFF";
     b.setAttribute("aria-label", `${device} ${state}`);

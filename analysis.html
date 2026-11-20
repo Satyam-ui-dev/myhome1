@@ -74,7 +74,7 @@
   });
 
   const API_KEY = "change-me-123";
-  const ESP_IP = "192.168.1.24";
+  const ESP_IP = "192.168.1.19";
   const devices = [
     { id: "light", name: "Light 1", watts: 15, timeField: "light_s" },
     { id: "light2", name: "Light 2", watts: 15, timeField: "light2_s" },
@@ -163,7 +163,7 @@
 
   function updateDevice(device, data, history, bootMs) {
     const state = typeof data[device.id] === "boolean" ? data[device.id] : null;
-    const displayedState = state === null ? null : !state;
+    const displayedState = state;
     const status = document.getElementById(`${device.id}-status`);
     status.textContent = `Status: ${displayedState === null ? "unknown" : displayedState ? "ON" : "OFF"}`;
     status.className = `status ${displayedState === null ? "" : displayedState ? "on" : "off"}`;
