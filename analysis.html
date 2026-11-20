@@ -41,8 +41,8 @@
   </nav>
   <h2>Device Analysis</h2>
   <div class="card">
-    <div id="connection" class="muted">Connecting to ESP32…</div>
-    <div id="analysis-note" class="muted">Waiting for the ESP32 clock to sync before loading saved history.</div>
+    <div id="connection" class="muted">Connecting to local server…</div>
+    <div id="analysis-note" class="muted">Activity and usage are calculated from the events saved in logs.json.</div>
   </div>
 
   <main id="devices"></main>
@@ -73,8 +73,6 @@
     }
   });
 
-  const API_KEY = "change-me-123";
-  const ESP_IP = "192.168.1.19";
   const devices = [
     { id: "light", name: "Light 1", watts: 15, timeField: "light_s" },
     { id: "light2", name: "Light 2", watts: 15, timeField: "light2_s" },
@@ -205,32 +203,76 @@
     document.getElementById(`${device.id}-empty`).style.display = rows.length ? "none" : "block";
   }
 
+  function deriveHistory(events, nowSeconds, states) {
+    const today = Math.floor(nowSeconds / 86400);
+    const firstDay = today - 29;
+    const history = Array.from({ length: 30 }, (_, index) => ({
+      d: firstDay + index,
+      light_s: 0,
+      light2_s: 0,
+      fan_s: 0,
+      socket_s: 0
+    }));
+    const byDay = new Map(history.map(day => [day.d, day]));
+    const fieldByDevice = Object.fromEntries(devices.map(device => [device.id, device.timeField]));
+    const openIntervals = {};
+
+    function addInterval(deviceId, start, end) {
+      const field = fieldByDevice[deviceId];
+      if (!field) return;
+      let cursor = Math.max(start, firstDay * 86400);
+      while (cursor < end) {
+        const dayNumber = Math.floor(cursor / 86400);
+        const segmentEnd = Math.min(end, (dayNumber + 1) * 86400);
+        const day = byDay.get(dayNumber);
+        if (day) day[field] += segmentEnd - cursor;
+        cursor = segmentEnd;
+      }
+    }
+
+    [...events].sort((a, b) => a.timestamp - b.timestamp).forEach(event => {
+      if (!fieldByDevice[event.device]) return;
+      if (event.state === 1) {
+        openIntervals[event.device] = event.timestamp;
+      } else if (openIntervals[event.device] !== undefined) {
+        addInterval(event.device, openIntervals[event.device], event.timestamp);
+        delete openIntervals[event.device];
+      }
+    });
+
+    Object.entries(openIntervals).forEach(([deviceId, start]) => {
+      if (states[deviceId] === true) addInterval(deviceId, start, nowSeconds);
+    });
+    return history;
+  }
+
   async function refresh() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
     try {
-      const response = await fetch(`http://${ESP_IP}/api/status`, {
-        headers: {
-          "X-API-Key": API_KEY,
-          "X-Timezone-Offset-Minutes": String(-new Date().getTimezoneOffset()),
-          "X-Client-Epoch": String(Math.floor(Date.now() / 1000))
-        },
-        signal: controller.signal
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      latestData = data;
-      document.getElementById("connection").textContent = `Connected to ${ESP_IP}`;
-      document.getElementById("error").textContent = "";
-      const note = document.getElementById("analysis-note");
-      note.textContent = data.time_synced
-        ? "Saved history and estimated energy are shown for the last 30 days."
-        : "Waiting for the ESP32 clock to sync before loading saved 30-day history.";
-      const history = Array.isArray(data.history) ? data.history : [];
-      const bootMs = Date.now() - data.up * 1000;
-      devices.forEach(device => updateDevice(device, data, history, bootMs));
+      const [statusResponse, logsResponse] = await Promise.all([
+        fetch("/api/status", { signal: controller.signal }),
+        fetch("/api/logs", { signal: controller.signal })
+      ]);
+      if (!statusResponse.ok || !logsResponse.ok) {
+        throw new Error(`HTTP ${!statusResponse.ok ? statusResponse.status : logsResponse.status}`);
+      }
+      const [status, logs] = await Promise.all([statusResponse.json(), logsResponse.json()]);
+      const events = Array.isArray(logs.events) ? logs.events : [];
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      latestData = {
+        ...status,
+        time_synced: true,
+        history: deriveHistory(events, nowSeconds, status),
+        events: events.map(event => ({ d: event.device, t: event.timestamp, s: event.state }))
+      };
+      document.getElementById("connection").textContent = status.connected
+        ? "Connected to ESP32 through the local server"
+        : "Local server cannot reach the ESP32";
+      document.getElementById("error").textContent = status.error || "";
+      devices.forEach(device => updateDevice(device, latestData, latestData.history, 0));
     } catch (error) {
-      document.getElementById("connection").textContent = `Cannot reach ESP32 at ${ESP_IP}`;
+      document.getElementById("connection").textContent = "Cannot reach the local server";
       document.getElementById("error").textContent = `Error: ${error.message}`;
     } finally {
       clearTimeout(timeout);
@@ -243,7 +285,7 @@
     devices.forEach(device => drawChart(device, latestData.time_synced ? history : []));
   });
   refresh();
-  setInterval(refresh, 5000);
+  setInterval(refresh, 3000);
 </script>
 </body>
 </html>

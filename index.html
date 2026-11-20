@@ -177,11 +177,7 @@
     try {
       const res = await fetch(`http://${ip}${path}`, {
         method,
-        headers: {
-          "X-API-Key": API_KEY,
-          "X-Timezone-Offset-Minutes": String(-new Date().getTimezoneOffset()),
-          "X-Client-Epoch": String(Math.floor(Date.now() / 1000))
-        },
+        headers: { "X-API-Key": API_KEY },
         signal: ctrl.signal
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
